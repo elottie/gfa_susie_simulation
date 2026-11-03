@@ -1,0 +1,5 @@
+*.out
+/metab_susie/
+*.RDS
+*.swp
+*.pdf
