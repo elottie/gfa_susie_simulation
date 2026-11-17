@@ -112,6 +112,18 @@ factor_spec <- assign_cs_to_factors(
 
 factor_spec
 
+K <- 2
+
+factor_inputs <- make_gwasbrewer_inputs(
+  pool = pool,
+  n_col = K,
+  n_causal_fn = as.list(unname(colSums(factor_spec$n_cs_mat))),
+  n_close = 0,
+  seed = 123
+)
+
+factor_inputs
+
 stop('told to stop here')
 
 #factor_fraction <- 0.3

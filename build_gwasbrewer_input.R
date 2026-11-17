@@ -85,6 +85,13 @@ load_cs_pool <- function(dir, prefix, ref_info, chrs = 1:22, r2_min = 0.05) {
 
 ## ---------- 2. Build pi and effect functions from selected variants ----------
 # sel: data.table with columns col, id, chr, pos, effect (one row per causal variant)
+
+# if doing factors, n_col = k, if direct effects, n_col = m
+# Direct trait effects: one function per trait
+#check_effect_function_list(snp_effect_function_theta, M, snp_info)
+# Factor effects: one function per factor
+#check_effect_function_list(snp_effect_function_L, K, snp_info)
+
 finalize_inputs <- function(sel, n_col, snp_ids = NULL) {
   sel <- copy(sel)
   if (is.null(snp_ids))
@@ -95,11 +102,32 @@ finalize_inputs <- function(sel, n_col, snp_ids = NULL) {
   pi <- matrix(0, length(snp_ids), n_col)
   pi[cbind(sel$row, sel$col)] <- 1
 
+  #fns <- lapply(seq_len(n_col), function(cc) {
+  #  e <- sel[col == cc][order(row), effect]       # effects in row order
+  #  function(n, ...) {
+  #    if (n != length(e)) stop("Effect function expected ", length(e), " effects, asked for ", n)
+  #    e
+  #  }
+  #})
   fns <- lapply(seq_len(n_col), function(cc) {
-    e <- sel[col == cc][order(row), effect]       # effects in row order
-    function(n, ...) {
-      if (n != length(e)) stop("Effect function expected ", length(e), " effects, asked for ", n)
-      e
+    e <- sel[col == cc][order(row), effect]  # effects in row order
+
+    function(n, sd, ...) {
+      effects <- rep(e, length.out = n)  # if n > than what we have effects for, repeat (satisfy gwasbrewer checker)
+      normalized_effects <- sd * effects / sqrt(sum(effects^2))  # normalize for gwasbrewer checker, should be sum(returned_effects^2) ≈ sd^2
+
+      cat("\nColumn:", cc, "| n:", n, "| sd:", sd, "\n")
+
+      cat("Original selected effects:\n")
+      print(e)
+
+      cat("Requested-length effects and normalized effects:\n")
+      print(data.frame(
+        original = effects,
+        normalized = normalized_effects
+      ))
+
+      normalized_effects
     }
   })
   list(pi = pi, snp_effect_function = fns, selected = sel, snp_ids = snp_ids)
@@ -131,7 +159,15 @@ resolve_n_causal <- function(n_causal_fn, n_col) {
   as.integer(N)
 }
 
-
+# n_col is the number of columns
+# n_causal_fn specifies how many causal SNPs to select for each column
+#Example: three factors
+#K <- 3
+#factor_inputs <- make_gwasbrewer_inputs(
+#  pool = pool,
+#  n_col = K,
+#  n_causal_fn = list(5L, 10L, 4L)
+#)
 make_gwasbrewer_inputs <- function(pool, n_col, n_causal_fn,
                                    n_close = 0, r2_close = 0.5,
                                    snp_ids = NULL, exclude_cs = character(0),
