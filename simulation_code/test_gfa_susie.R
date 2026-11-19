@@ -10,18 +10,19 @@ library(Matrix)
 set.seed(123)
 
 # --- read gb input data obj ---
-gb_inp_string <- "20Trt_FacProp0_NClose4_Poly0.1"
+gb_inp_string <- "20Trt_FacProp0_NClose4_Poly0.5"
 gb_inp_filename <- paste0('GBInp_',gb_inp_string,'.RDS')
 gb_inp <- readRDS(gb_inp_filename)
-pi_L <- gb_inp$pi
-str(pi_L)
-M <- ncol(pi_L)
+pi_theta <- gb_inp$pi
+str(pi_theta)
+M <- ncol(pi_theta)
 
 ref <- readRDS("/nfs/turbo/sph-jvmorr/GFA_susie/simulation/metab_susie/ld_ref/metsim_ld_ref_1M.RDS") 
 
 # read in heritabilities so sim data can use them
 met_dict <- readRDS("metDict.RDS")
 herit <- met_dict$GREML_PC5_Herit
+h2_used <- sample(herit, size = M)
 
 pdf(paste0("Rplots_",gb_inp_string,".pdf"), width = 8, height = 10)
 
@@ -31,12 +32,13 @@ F_mat = matrix(0, nrow = M, ncol = 2)  # no facs
 
 dat <- sim_lf(
   F_mat = F_mat,
-  N = 50000,
-  J = nrow(pi_L),
-  h2_trait = sample(herit, size = M),
+  N = 10000,
+  J = nrow(pi_theta),
+  h2_trait = h2_used,
   omega = rep(0, M),        # No heritability mediated by factors
   pi_L = 0,                 # Placeholder; factor effects are inactive
-  pi_theta = pi_L,          # Direct-effect causal SNP proportions
+  pi_theta = pi_theta,          # Direct-effect causal SNP proportions
+  snp_effect_function_theta = gb_inp$snp_effect_function,
   R_LD = ref$R_LD,          # jean made from metsim
   af = ref$snp_info$AF,
   est_s = TRUE)
@@ -136,9 +138,18 @@ par(
 plots_per_page <- 10L
 n_plots <- length(traits)
 
+panel_titles <- paste0(
+  trait_names,
+  ":  n_cs ", gb_inp$N,
+  ", h2 ", signif(h2_used, 3)
+)
+
 for (i in seq_along(traits)) {
   tr <- traits[i]
   d <- plot_dat[plot_dat$trait == tr, ]
+
+  # Trait column corresponding to this plot
+  trait_number <- match(as.character(tr), trait_names)
 
   # Panel number within the current page: 1 through 10
   panel <- ((i - 1L) %% plots_per_page) + 1L
@@ -150,12 +161,9 @@ for (i in seq_along(traits)) {
     cex = 0.7,
     xlab = "",
     ylab = "",
-    main = tr,
+    main = panel_titles[trait_number],
     axes = FALSE
   )
-
-  # Trait column corresponding to this plot
-  trait_number <- match(tr, trait_names)
 
   bounds <- unlist(
     cs$x_bounds[cs$trait_number == trait_number],

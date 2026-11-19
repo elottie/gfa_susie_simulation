@@ -19,7 +19,7 @@ M <- 20
 n_close <- 4
 
 # 0.5 too high
-polygen_prop <- 0.1
+polygen_prop <- 0.7
 
 # --- load data ---
 # load credible sets and their relationships
@@ -67,4 +67,4 @@ str(gb_inp_poly)
 
 # --- save inputs ---
 saveRDS(gb_inp,'GBInp_20Trt_FacProp0_NClose4_Poly0.RDS')
-saveRDS(gb_inp_poly,'GBInp_20Trt_FacProp0_NClose4_Poly0.1.RDS')
+saveRDS(gb_inp_poly,paste0('GBInp_20Trt_FacProp0_NClose4_Poly',polygen_prop,'.RDS'))

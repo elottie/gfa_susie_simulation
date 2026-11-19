@@ -92,6 +92,12 @@ load_cs_pool <- function(dir, prefix, ref_info, chrs = 1:22, r2_min = 0.05) {
 # Factor effects: one function per factor
 #check_effect_function_list(snp_effect_function_L, K, snp_info)
 
+# first fix gwasbrewer snp effect function.  would wait to eval e[order(rows)], then eval once loop finishes, so all for trait 20
+make_fixed_effect_fn <- function(b) {
+  force(b)
+  GWASBrewer::fixed_to_scale_fam(b)
+}
+
 finalize_inputs <- function(sel, n_col, snp_ids = NULL) {
   sel <- copy(sel)
   if (is.null(snp_ids))
@@ -105,7 +111,7 @@ finalize_inputs <- function(sel, n_col, snp_ids = NULL) {
   fns <- lapply(seq_len(n_col), function(cc) {
     e <- sel[col == cc][order(row), effect]  # effects in row order
 
-    GWASBrewer::fixed_to_scale_fam(e)
+    make_fixed_effect_fn(e)
   })
   list(pi = pi, snp_effect_function = fns, selected = sel, snp_ids = snp_ids)
 }
@@ -160,9 +166,9 @@ finalize_inputs_polygenic <- function(sel, n_col, snp_ids = NULL,
         e    <- c(e, z)
       }
     }
-    # make functions for generating causal snp effects
+    # make functions fori generating causal snp effects
     # rescales sum of squared snp effects = sd^2
-    fns[[cc]] <- GWASBrewer::fixed_to_scale_fam(e[order(rows)])   # effects in row order
+    fns[[cc]] <- make_fixed_effect_fn(e[order(rows)])   # effects in row order
   }
   list(pi = pi, snp_effect_function = fns, selected = sel,
        polygenic = rbindlist(bg), snp_ids = snp_ids)
